@@ -107,13 +107,10 @@ def main() -> None:
         log_box = st.empty()
         with st.spinner("Running agent review..."):
             try:
-                logs: List[str] = []
-
                 def handle_log(chunk: str) -> None:
-                    logs.append(chunk)
                     log_box.code(chunk)
 
-                result, logs = run_agent(folder, model_input.strip() or None, handle_log)
+                result, _ = run_agent(folder, model_input.strip() or None, handle_log)
                 st.subheader("Review Result")
                 st.write(result)
             except Exception as exc:  # pragma: no cover - UI path
