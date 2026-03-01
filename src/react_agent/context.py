@@ -22,7 +22,7 @@ class Context:
     )
 
     model: Annotated[str, {"__template_metadata__": {"kind": "llm"}}] = field(
-        default="anthropic/claude-sonnet-4-5-20250929",
+        default="lmstudio/qwen2.5-coder-32b",
         metadata={
             "description": "The name of the language model to use for the agent's main interactions. "
             "Should be in the form: provider/model-name."
@@ -33,6 +33,13 @@ class Context:
         default=10,
         metadata={
             "description": "The maximum number of search results to return for each search query."
+        },
+    )
+
+    base_dir: str | None = field(
+        default=None,
+        metadata={
+            "description": "Base directory the agent tools should read from (path on disk)."
         },
     )
 
