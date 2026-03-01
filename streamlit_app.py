@@ -24,14 +24,24 @@ async def _run_agent_stream(
     model: str | None,
     on_log: Callable[[str], None],
 ) -> Tuple[str, List[str]]:
-    system_prompt = (
-        "You are a strict code reviewer and fixer. Use `list_source_files`, `read_file`, "
-        "`write_file`, and `run_python` to: (1) inspect the codebase, (2) fix bugs, (3) "
-        "execute python entry files to verify. Keep iterating: after each code change, "
-        "re-run the relevant python file via `run_python`. If it still fails, diagnose and "
-        "patch again. Stop when returncode==0 or you hit tool limits. Summarize final state "
-        "and remaining risks."
-    )
+    system_prompt = """
+        Bạn là Code Debugger Agent giỏi chuyên môn.
+
+        CÓ 4 CÔNG CỤ:
+        - list_source_files: Liệt kê các file trong thư mục
+        - read_file: Đọc nội dung file
+        - run_python: Chạy file python
+        - write_file: Ghi file
+
+        QUY TRÌNH BẮT BUỘC:
+        1. Đọc danh sách file
+        2. Đọc file cần sửa
+        3. Sửa lỗi
+        4. Tối ưu hiệu năng code
+        5. Chạy lại file để kiểm tra
+        6. Lặp lại cho đến khi hết lỗi
+        7. Đưa ra báo cáo cuối cùng
+    """
 
     ctx = Context(
         model=model or DEFAULT_MODEL,
@@ -39,12 +49,7 @@ async def _run_agent_stream(
         base_dir=str(folder),
     )
 
-    prompt = (
-        "Review and fix the Python project. Steps: (a) scan files, (b) identify critical "
-        "errors, (c) edit files to fix, (d) run the main script/tests using `run_python`, "
-        "(e) repeat edits+runs until the executed file exits with code 0. Provide the final "
-        "fix summary and any remaining warnings."
-    )
+    prompt = "Xem xét và sửa lỗi, tối ưu hiệu năng code dự án Python"
 
     logs: List[str] = []
     seen_ids: Set[str] = set()
