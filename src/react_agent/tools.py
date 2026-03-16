@@ -52,11 +52,16 @@ async def search(query: str) -> Optional[dict[str, Any]]:
     return cast(dict[str, Any], await wrapped.ainvoke({"query": query}))
 
 
-async def list_source_files(pattern: str = "**/*") -> list[str]:
-    """List text-like source files under the configured base_dir."""
+async def list_source_files(directory: str = ".", pattern: str = "**/*") -> list[str]:
+    """List text-like source files under a specific directory within the configured base_dir."""
     base_path = _resolve_base_dir()
+    target_dir = (base_path / directory).resolve()
+    
+    if not str(target_dir).startswith(str(base_path)):
+        raise ValueError("Directory escapes base_dir")
+        
     paths: List[str] = []
-    for path in base_path.glob(pattern):
+    for path in target_dir.glob(pattern):
         if path.is_file() and _is_text_file(path):
             rel = path.relative_to(base_path)
             paths.append(str(rel))
