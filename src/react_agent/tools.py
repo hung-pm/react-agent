@@ -12,6 +12,7 @@ from typing import Any, Callable, Iterable, List, Optional, cast
 
 from langchain_tavily import TavilySearch
 from langgraph.runtime import get_runtime
+from langchain.tools import tool
 
 from react_agent.context import Context
 
@@ -44,14 +45,14 @@ def _is_text_file(path: Path) -> bool:
         ".ini",
     }
 
-
+@tool
 async def search(query: str) -> Optional[dict[str, Any]]:
     """Search for general web results."""
     runtime = get_runtime(Context)
     wrapped = TavilySearch(max_results=runtime.context.max_search_results)
     return cast(dict[str, Any], await wrapped.ainvoke({"query": query}))
 
-
+@tool
 async def list_source_files(directory: str = ".", pattern: str = "**/*") -> list[str]:
     """List text-like source files under a specific directory within the configured base_dir."""
     base_path = _resolve_base_dir()
@@ -67,7 +68,7 @@ async def list_source_files(directory: str = ".", pattern: str = "**/*") -> list
             paths.append(str(rel))
     return sorted(paths)
 
-
+@tool
 async def read_file(path: str, max_bytes: int = 200_000) -> dict[str, Any]:
     """Read a text file relative to base_dir with a size limit."""
     base_path = _resolve_base_dir()
@@ -86,7 +87,7 @@ async def read_file(path: str, max_bytes: int = 200_000) -> dict[str, Any]:
         text = data.decode("latin-1", errors="replace")
     return {"path": str(target.relative_to(base_path)), "content": text}
 
-
+@tool
 async def write_file(path: str, content: str, **_: Any) -> dict[str, str]:
     """Create or overwrite a text file under base_dir."""
     base_path = _resolve_base_dir()
@@ -97,7 +98,7 @@ async def write_file(path: str, content: str, **_: Any) -> dict[str, str]:
     target.write_text(content, encoding="utf-8")
     return {"path": str(target.relative_to(base_path)), "status": "written"}
 
-
+@tool
 async def run_python(
     path: str,
     args: Optional[List[str]] = None,
@@ -150,4 +151,4 @@ async def run_python(
     }
 
 
-TOOLS: List[Callable[..., Any]] = [search, list_source_files, read_file, write_file, run_python]
+TOOLS = [search, list_source_files, read_file, write_file, run_python]

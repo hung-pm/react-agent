@@ -24,28 +24,8 @@ async def _run_agent_stream(
     model: str | None,
     on_log: Callable[[str], None],
 ) -> Tuple[str, List[str]]:
-    system_prompt = """
-        Bạn là Code Debugger Agent giỏi chuyên môn.
-
-        CÓ 4 CÔNG CỤ:
-        - list_source_files: Liệt kê các file trong thư mục
-        - read_file: Đọc nội dung file
-        - run_python: Chạy file python
-        - write_file: Ghi file
-
-        QUY TRÌNH BẮT BUỘC:
-        1. Đọc danh sách file
-        2. Đọc file cần sửa
-        3. Sửa lỗi
-        4. Tối ưu hiệu năng code
-        5. Chạy lại file để kiểm tra
-        6. Lặp lại cho đến khi hết lỗi
-        7. Đưa ra báo cáo cuối cùng
-    """
-
     ctx = Context(
         model=model or DEFAULT_MODEL,
-        system_prompt=system_prompt,
         base_dir=str(folder),
     )
 
@@ -95,7 +75,7 @@ def main() -> None:
     st.set_page_config(page_title="ReAct Code Review", page_icon="🧭", layout="wide")
     st.title("ReAct Agent Code Review")
 
-    default_folder = "/Users/minhhung/Documents/GitHub/py-demo"
+    default_folder = "/Users/nguyenvanquan/Quan/Dev/ai/react-agent/sample"
     folder_input = st.text_input("Folder path", default_folder, help="Path to the source folder to review")
     model_input = st.text_input("Model", DEFAULT_MODEL, help="Provider/model, e.g. lmstudio/your-model")
 

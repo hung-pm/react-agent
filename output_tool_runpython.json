@@ -1,0 +1,21 @@
+{
+    "function": {
+        "name": "run_python",
+        "description": "Execute a Python file under base_dir and return stdout/stderr.",
+        "parameters": {
+            "properties": {
+                "path": {
+                    "type": "string"
+                },
+                "timeout": {
+                    "default": 120.0,
+                    "type": "number"
+                }
+            },
+            "required": [
+                "path"
+            ],
+            "type": "object"
+        }
+    }
+}
