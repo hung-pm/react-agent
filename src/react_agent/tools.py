@@ -145,4 +145,60 @@ async def run_python(
     }
 
 
-TOOLS: List[Callable[..., Any]] = [search, list_source_files, read_file, write_file, run_python]
+async def get_git_changes(
+    staged: bool = False,
+    target: Optional[str] = None,
+    **_: Any,
+) -> dict[str, Any]:
+    """Retrieve git changes (status and diff) in a format suitable for LLMs."""
+    base_path = _resolve_base_dir()
+
+    status_proc = await asyncio.create_subprocess_exec(
+        "git",
+        "status",
+        "--short",
+        cwd=str(base_path),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    status_stdout, _ = await status_proc.communicate()
+    status_txt = status_stdout.decode("utf-8", errors="replace").strip()
+
+    diff_cmd = ["git", "diff"]
+    if staged:
+        diff_cmd.append("--staged")
+    if target:
+        diff_cmd.append(target)
+
+    diff_proc = await asyncio.create_subprocess_exec(
+        *diff_cmd,
+        cwd=str(base_path),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    diff_stdout, diff_stderr = await diff_proc.communicate()
+
+    if diff_proc.returncode != 0:
+        return {
+            "error": "Failed to execute git diff",
+            "stderr": diff_stderr.decode("utf-8", errors="replace"),
+            "status": status_txt,
+        }
+
+    diff_txt = diff_stdout.decode("utf-8", errors="replace")[:200_000]
+
+    parsed_status = []
+    if status_txt:
+        for line in status_txt.splitlines():
+            if len(line) > 2:
+                state = line[:2].strip()
+                file_path = line[2:].strip()
+                parsed_status.append({"state": state, "file": file_path})
+
+    return {
+        "status": parsed_status,
+        "diff": diff_txt if diff_txt else None
+    }
+
+
+TOOLS: List[Callable[..., Any]] = [search, list_source_files, read_file, write_file, run_python, get_git_changes]
