@@ -24,9 +24,9 @@ load_dotenv()
 # Thêm root vào path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.chunker import chunk_directory
-from src.vector_store import CodebaseVectorStore
-from src.code_graph import CodeGraph
+from src.parsing.chunker import chunk_directory
+from src.search.vector_store import CodebaseVectorStore
+from src.parsing.code_graph import CodeGraph
 
 console = Console()
 

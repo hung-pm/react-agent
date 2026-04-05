@@ -3,26 +3,36 @@
 LangGraph agent có khả năng hiểu codebase và fix bug, sử dụng:
 - **tree-sitter-languages** — AST chunking
 - **ChromaDB** + **OpenAI Embeddings** — vector search
+- **rank_bm25** — BM25 keyword search
 - **NetworkX** — call graph context
 - **LangGraph** — agent orchestration
+- **Streamlit** — giao diện web
 
 ---
 
 ## Cấu trúc project
 
 ```
-codebase-agent/
+agent-codebase/
 ├── src/
-│   ├── models.py        # CodeChunk, AgentState
-│   ├── chunker.py       # AST parser & chunking
-│   ├── vector_store.py  # ChromaDB wrapper
-│   ├── code_graph.py    # Call graph (NetworkX)
-│   └── agent.py         # LangGraph agent
+│   ├── core/                 # Nhân hệ thống
+│   │   ├── agent.py          # LangGraph agent graph
+│   │   ├── models.py         # CodeChunk data model
+│   │   └── tools.py          # Agent tools (search, callers, callees, context)
+│   ├── parsing/              # Phân tích mã nguồn
+│   │   ├── chunker.py        # AST parser & chunking (tree-sitter)
+│   │   └── code_graph.py     # Call graph (NetworkX)
+│   └── search/               # Tìm kiếm & lưu trữ vector
+│       ├── hybrid_search.py  # Hybrid search: BM25 + Semantic + RRF
+│       └── vector_store.py   # ChromaDB wrapper
 ├── scripts/
-│   ├── index.py         # Index codebase → ChromaDB
-│   └── chat.py          # Chat CLI với agent
-├── sample_project/
-│   └── app.py           # Codebase mẫu có bug để test
+│   ├── index.py              # Index codebase → ChromaDB
+│   ├── chat.py               # Chat CLI với agent
+│   ├── inspect_db.py         # Xem nội dung ChromaDB
+│   └── inspect_graph.py      # Xem call graph relationships
+├── streamlit_app.py           # Giao diện web Streamlit
+├── sample_project/            # Codebase mẫu đơn giản
+├── complex_project/           # Codebase mẫu phức tạp (3 tầng)
 ├── requirements.txt
 └── .env.example
 ```
@@ -57,7 +67,7 @@ Mở `.env` và điền API key:
 OPENAI_API_KEY=sk-...your-key-here...
 ```
 
-> Nếu không có OpenAI key, xem phần **Chạy offline** bên dưới.
+> Hệ thống hiện đang cấu hình sử dụng LM Studio local tại `http://[IP_ADDRESS]/v1`.
 
 ---
 
@@ -69,6 +79,9 @@ OPENAI_API_KEY=sk-...your-key-here...
 # Index sample project có sẵn
 python scripts/index.py --dir ./sample_project
 
+# Hoặc index project phức tạp hơn
+python scripts/index.py --dir ./complex_project
+
 # Hoặc index project của bạn
 python scripts/index.py --dir /path/to/your/project
 
@@ -76,90 +89,93 @@ python scripts/index.py --dir /path/to/your/project
 python scripts/index.py --dir ./sample_project --reindex
 ```
 
-Output mẫu:
-```
-━━━━━━━━━━━━━━ Codebase Indexer ━━━━━━━━━━━━━━
-  Target dir : /path/to/sample_project
-  ChromaDB   : .chroma
-  Reindex    : False
-
-  Language    Count
-  python         12
-
-  Type        Count
-  function        8
-  class           3
-  method          1
-
-  ✓ Call graph: 12 nodes, 7 call edges
-  ✓ Done! 12 chunks in ChromaDB → .chroma
-
-Index complete! Bạn có thể chạy agent ngay bây giờ.
-```
-
 ### Bước 2 — Chat với agent
 
+**CLI:**
 ```bash
-python scripts/chat.py --dir ./sample_project
+python scripts/chat.py --dir ./complex_project
+```
+
+**Web UI (Streamlit):**
+```bash
+streamlit run streamlit_app.py
+```
+
+---
+
+## Công cụ chẩn đoán
+
+### Xem nội dung ChromaDB
+
+```bash
+# Xem thống kê
+python scripts/inspect_db.py
+
+# Xuất toàn bộ ra file
+python scripts/inspect_db.py --full --output export.md
+```
+
+### Xem call graph
+
+```bash
+# Xem toàn bộ quan hệ
+python scripts/inspect_graph.py --dir ./complex_project
+
+# Xem chi tiết 1 hàm
+python scripts/inspect_graph.py --dir ./complex_project --node save_user
 ```
 
 ---
 
 ## Câu hỏi mẫu để test
 
-Sau khi chạy với `sample_project`, thử hỏi:
+Sau khi chạy với `complex_project`, thử hỏi:
 
 ```
-You: có bug gì trong hàm remove_item không?
+You: phân tích hàm handle_buy_items
 
-You: hàm get_order_by_id có vấn đề gì?
+You: hàm lưu user có vấn đề gì không?
 
-You: fix bug trong calculate_total
+You: tìm tất cả chỗ có thể gây lỗi
 
-You: tìm tất cả chỗ có thể gây KeyError
+You: hàm nào gọi đến save_order?
 
-You: process_order có logic lỗi gì?
-
-You: hàm nào gọi đến get_discount?
+You: fix bug trong create_checkout
 ```
 
 ---
 
-## Options
+## Hybrid Search
 
-### Đổi model
+Agent sử dụng **Hybrid Search** kết hợp hai phương pháp:
 
-```bash
-# Dùng GPT-4o thay vì GPT-4o-mini (chính xác hơn, đắt hơn)
-python scripts/chat.py --dir ./sample_project --model gpt-4o
+| Phương pháp | Ưu điểm |
+|---|---|
+| **Semantic Search** (ChromaDB) | Tìm code theo ý nghĩa, hiểu ngữ cảnh |
+| **BM25 Keyword** (rank_bm25) | Tìm chính xác tên hàm, biến, class |
 
-# Dùng GPT-3.5 (nhanh hơn, rẻ hơn)
-python scripts/chat.py --dir ./sample_project --model gpt-3.5-turbo
+Kết quả được kết hợp bằng **Reciprocal Rank Fusion (RRF)** để đạt độ chính xác cao nhất.
+
+---
+
+## Mở rộng
+
+### Thêm ngôn ngữ mới
+Trong `src/parsing/chunker.py`, thêm vào `EXTENSION_MAP` và `CHUNK_NODE_TYPES`:
+```python
+EXTENSION_MAP[".kt"] = "kotlin"
+CHUNK_NODE_TYPES["kotlin"] = {"function_declaration", "class_declaration"}
 ```
 
-### Chạy offline (không cần OpenAI key)
-
-Thay embedding model bằng Ollama:
-
-1. Cài [Ollama](https://ollama.ai) và pull model:
-   ```bash
-   ollama pull nomic-embed-text
-   ollama pull llama3.2
-   ```
-
-2. Sửa `src/vector_store.py` — đổi embedding function:
-   ```python
-   from langchain_ollama import OllamaEmbeddings
-   
-   self.embedding_fn = OllamaEmbeddings(model="nomic-embed-text")
-   ```
-
-3. Sửa `src/agent.py` — đổi LLM:
-   ```python
-   from langchain_ollama import ChatOllama
-   
-   llm = ChatOllama(model="llama3.2", temperature=0).bind_tools(tools)
-   ```
+### Thêm tool mới cho agent
+Trong `src/core/tools.py`, thêm function với decorator `@tool` bên trong `make_tools()`:
+```python
+@tool
+def search_by_file(file_path: str) -> str:
+    """Lấy tất cả chunks trong một file cụ thể."""
+    results = vector_store.search(file_path, filter_file=file_path, k=20)
+    ...
+```
 
 ---
 
@@ -176,46 +192,13 @@ Index lại:
 python scripts/index.py --dir ./sample_project --reindex
 ```
 
+### Dimension mismatch khi đổi embedding model
+Xóa thư mục `.chroma/` rồi chạy index lại:
+```bash
+rm -rf .chroma
+python scripts/index.py --dir ./complex_project --reindex
+```
+
 ### Agent trả lời chung chung, không tìm thấy code
 - Kiểm tra index đã chạy chưa: thư mục `.chroma/` phải tồn tại
 - Chạy `python scripts/index.py` trước khi chat
-
-### `RateLimitError` từ OpenAI
-Giảm batch size trong `scripts/index.py`:
-```python
-store.index_chunks(batch, batch_size=20)  # giảm từ 50 → 20
-```
-
----
-
-## Mở rộng
-
-### Thêm ngôn ngữ mới
-Trong `src/chunker.py`, thêm vào `EXTENSION_MAP` và `CHUNK_NODE_TYPES`:
-```python
-EXTENSION_MAP[".kt"] = "kotlin"
-CHUNK_NODE_TYPES["kotlin"] = {"function_declaration", "class_declaration"}
-```
-
-### Thêm tool mới cho agent
-Trong `src/agent.py`, thêm function với decorator `@tool`:
-```python
-@tool
-def search_by_file(file_path: str) -> str:
-    """Lấy tất cả chunks trong một file cụ thể."""
-    results = vector_store.search(file_path, filter_file=file_path, k=20)
-    ...
-```
-
-### Lưu conversation history
-Dùng LangGraph checkpointing:
-```python
-from langgraph.checkpoint.memory import MemorySaver
-
-checkpointer = MemorySaver()
-app = builder.compile(checkpointer=checkpointer)
-
-# Mỗi session có thread_id riêng
-config = {"configurable": {"thread_id": "session-001"}}
-app.invoke({"messages": [...]}, config=config)
-```

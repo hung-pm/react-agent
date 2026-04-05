@@ -8,7 +8,7 @@ from collections import defaultdict
 
 import networkx as nx
 
-from .models import CodeChunk
+from src.core.models import CodeChunk
 
 
 class CodeGraph:

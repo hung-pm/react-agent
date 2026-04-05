@@ -22,10 +22,10 @@ load_dotenv()
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.chunker import chunk_directory
-from src.vector_store import CodebaseVectorStore
-from src.code_graph import CodeGraph
-from src.agent import create_agent
+from src.parsing.chunker import chunk_directory
+from src.search.vector_store import CodebaseVectorStore
+from src.parsing.code_graph import CodeGraph
+from src.core.agent import create_agent
 
 console = Console()
 
@@ -67,7 +67,7 @@ def load_codebase(target_dir: str, chroma_dir: str):
             f"[bold]{db_stats['total_chunks']}[/bold] chunks cached"
         )
 
-    return store, graph
+    return store, graph, chunks
 
 
 def stream_response(app, messages: list, console: Console) -> str:
@@ -120,10 +120,10 @@ def main():
     console.print()
 
     # Load
-    store, graph = load_codebase(str(target_dir), args.chroma_dir)
+    store, graph, chunks = load_codebase(str(target_dir), args.chroma_dir)
 
     # Create agent with hybrid search
-    app = create_agent(store, graph, model=args.model)
+    app = create_agent(store, graph, chunks=chunks, model=args.model)
 
     console.print("\n[bold green]Agent sẵn sàng![/bold green]")
     console.print("Gõ câu hỏi về codebase hoặc mô tả bug. Gõ [bold]exit[/bold] để thoát.\n")

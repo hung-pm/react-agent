@@ -9,7 +9,7 @@ from typing import Iterator
 
 from tree_sitter_languages import get_parser, get_language
 
-from .models import CodeChunk
+from src.core.models import CodeChunk
 
 # Map extension → tên ngôn ngữ tree-sitter
 EXTENSION_MAP = {
@@ -178,6 +178,7 @@ def _extract_chunks_from_tree(
             walk(child, depth + 1)
 
     walk(root_node)
+    print(chunks)
     return chunks
 
 

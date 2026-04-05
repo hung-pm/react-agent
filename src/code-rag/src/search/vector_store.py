@@ -11,7 +11,7 @@ from chromadb.config import Settings
 from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
 
-from src.models import CodeChunk
+from src.core.models import CodeChunk
 
 
 COLLECTION_NAME = "codebase"
@@ -25,7 +25,7 @@ class CodebaseVectorStore:
     def __init__(
         self,
         persist_dir: str = ".chroma",
-        embedding_model: str = "text-embedding-nomic-embed-code",
+        embedding_model: str = "text-embedding-e5-large-v2",
         openai_api_key: str | None = None,
     ):
         self.persist_dir = persist_dir
